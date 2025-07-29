@@ -76,6 +76,12 @@ conn = pyodbc.connect(
     )
 cursor = conn.cursor()
 
+# Since we use this table tmp.ComicsBasic as imp table, need to truncate it before we insert the new records
+# Update process to get the whole current table will happen in DWH layer
+# Also another option is to use user-defined table type parameter to updated the reocrd directly in this table
+cursor.execute("TRUNCATE TABLE tmp.ComicsBasic")
+conn.commit()
+
 # In order to improve the performance of the activity, we devide the whole df into chunks
 # Can also help with debug when the first time you try to insert data in the database
 # Here I define the chunk size as 1000, it can be chagned

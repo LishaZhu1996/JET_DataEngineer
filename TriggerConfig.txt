@@ -1,0 +1,43 @@
+{
+    "name": "Comic",
+    "properties": {
+        "annotations": [],
+        "runtimeState": "Stopped",
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "Comic",
+                    "type": "PipelineReference"
+                },
+                "parameters": {
+                    "Fullload": "0",
+                    "EntityControlTable": "tmp.EntityControlTable"
+                }
+            }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Week",
+                "interval": 1,
+                "startTime": "2025-07-29T18:34:00",
+                "timeZone": "W. Europe Standard Time",
+                "schedule": {
+                    "minutes": [
+                        0,
+                        10,
+                        20,
+                        30,
+                        40,
+                        50
+                    ],
+                    "weekDays": [
+                        "Monday",
+                        "Wednesday",
+                        "Friday"
+                    ]
+                }
+            }
+        }
+    }
+}

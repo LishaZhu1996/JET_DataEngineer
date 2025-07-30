@@ -1,0 +1,234 @@
+{
+    "name": "Comic",
+    "properties": {
+        "activities": [
+            {
+                "name": "GetEachEntityInfo",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": "select * from tmp.EntityControlTable",
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_ASQL_ACT_BI",
+                        "type": "DatasetReference"
+                    }
+                }
+            },
+            {
+                "name": "ForEachEntity",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "GetEachEntityInfo",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('GetEachEntityInfo').output.value",
+                        "type": "Expression"
+                    },
+                    "activities": [
+                        {
+                            "name": "Switch1",
+                            "type": "Switch",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "on": {
+                                    "value": "@string(pipeline().parameters.Fullload)",
+                                    "type": "Expression"
+                                },
+                                "cases": [
+                                    {
+                                        "value": "1",
+                                        "activities": [
+                                            {
+                                                "name": "Update fulload mode",
+                                                "type": "Script",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "linkedServiceName": {
+                                                    "referenceName": "ACT_BI",
+                                                    "type": "LinkedServiceReference"
+                                                },
+                                                "typeProperties": {
+                                                    "scripts": [
+                                                        {
+                                                            "type": "Query",
+                                                            "text": {
+                                                                "value": "@concat('UPDATE tmp.EntityControlTable SET fullload = 1 WHERE id = ', item().id)",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "scriptBlockExecutionTimeout": "02:00:00"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "0",
+                                        "activities": [
+                                            {
+                                                "name": "Update delta load mode",
+                                                "type": "Script",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.12:00:00",
+                                                    "retry": 0,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "linkedServiceName": {
+                                                    "referenceName": "ACT_BI",
+                                                    "type": "LinkedServiceReference"
+                                                },
+                                                "typeProperties": {
+                                                    "scripts": [
+                                                        {
+                                                            "type": "Query",
+                                                            "text": {
+                                                                "value": "@concat('UPDATE tmp.EntityControlTable SET fullload = 0 WHERE id = ', item().id)",
+                                                                "type": "Expression"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "scriptBlockExecutionTimeout": "02:00:00"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "defaultActivities": [
+                                    {
+                                        "name": "Defult update",
+                                        "type": "Script",
+                                        "dependsOn": [],
+                                        "policy": {
+                                            "timeout": "0.12:00:00",
+                                            "retry": 0,
+                                            "retryIntervalInSeconds": 30,
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "linkedServiceName": {
+                                            "referenceName": "ACT_BI",
+                                            "type": "LinkedServiceReference"
+                                        },
+                                        "typeProperties": {
+                                            "scripts": [
+                                                {
+                                                    "type": "Query",
+                                                    "text": {
+                                                        "value": "@concat('UPDATE tmp.EntityControlTable SET fullload = 0 WHERE id = ', item().id)",
+                                                        "type": "Expression"
+                                                    }
+                                                }
+                                            ],
+                                            "scriptBlockExecutionTimeout": "02:00:00"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "Azure Functionto load data",
+                            "type": "AzureFunctionActivity",
+                            "dependsOn": [
+                                {
+                                    "activity": "Switch1",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": []
+                        },
+                        {
+                            "name": "UpdateLastAttemptDatetime",
+                            "type": "Script",
+                            "dependsOn": [
+                                {
+                                    "activity": "Azure Functionto load data",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "linkedServiceName": {
+                                "referenceName": "ACT_BI",
+                                "type": "LinkedServiceReference"
+                            },
+                            "typeProperties": {
+                                "scripts": [
+                                    {
+                                        "type": "Query",
+                                        "text": {
+                                            "value": "@concat(\n  'UPDATE YourTable SET LastAttemptDatetime = GETUTCDATE() WHERE id = ', item().id\n)",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                ],
+                                "scriptBlockExecutionTimeout": "02:00:00"
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "concurrency": 1,
+        "parameters": {
+            "Fullload": {
+                "type": "string",
+                "defaultValue": "0"
+            },
+            "EntityControlTable": {
+                "type": "string",
+                "defaultValue": "tmp.EntityControlTable"
+            }
+        },
+        "annotations": []
+    }
+}
